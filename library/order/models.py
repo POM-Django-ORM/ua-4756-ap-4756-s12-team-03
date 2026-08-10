@@ -2,12 +2,26 @@ from django.db import models
 
 
 class Order(models.Model):
+    user = models.ForeignKey('authentication.CustomUser', on_delete=models.CASCADE)
+    book = models.ForeignKey('book.Book', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    end_at = models.DateTimeField(null=True, blank=True, default=None)
+    plated_end_at = models.DateTimeField()
 
     def __str__(self):
         """
         Magic method is redefined to show all information about Order.
         :return: book id, book name, book description, book count, book authors
         """
+        fields = {
+            'id': self.id,
+            'user': self.user,
+            'book': self.book,
+            'created_at': str(self.created_at),
+            'end_at': str(self.end_at) if self.end_at is not None else None,
+            'plated_end_at': str(self.plated_end_at),
+        }
+        return str(fields)[1:-1]
 
     def __repr__(self):
         """
@@ -29,7 +43,14 @@ class Order(models.Model):
         |   'plated_end_at': 1509402866,
         | }
         """
-        pass
+        return {
+            'id': self.id,
+            'book': self.book.id,
+            'user': self.user.id,
+            'created_at': int(self.created_at.timestamp()),
+            'end_at': int(self.end_at.timestamp()) if self.end_at is not None else None,
+            'plated_end_at': int(self.plated_end_at.timestamp()),
+        }
 
     @staticmethod
     def create(user, book, plated_end_at):
@@ -43,7 +64,15 @@ class Order(models.Model):
         :return: a new order object which is also written into the DB
         """
 
-        pass
+        if user.id is None or book.id is None:
+            return None
+
+        taken = Order.objects.filter(book=book, end_at__isnull=True).count()
+        if taken >= book.count:
+            return None
+        order = Order(user=user, book=book, plated_end_at=plated_end_at)
+        order.save()
+        return order
 
     @staticmethod
     def get_by_id(order_id):
@@ -52,7 +81,10 @@ class Order(models.Model):
         :type order_id: int
         :return:  the object of the order, according to the specified id or null in case of its absence
         """
-        pass
+        try:
+            return Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return None
 
     def update(self, plated_end_at=None, end_at=None):
         """
@@ -63,21 +95,25 @@ class Order(models.Model):
         :type plated_end_at: int (timestamp)
         :return: None
         """
-        pass
+        if plated_end_at is not None:
+            self.plated_end_at = plated_end_at
+        if end_at is not None:
+            self.end_at = end_at
+        self.save()
 
     @staticmethod
     def get_all():
         """
         :return: all orders
         """
-        pass
+        return list(Order.objects.all())
 
     @staticmethod
     def get_not_returned_books():
         """
         :return:  all orders that do not have a return date (end_at)
         """
-        pass
+        return list(Order.objects.filter(end_at__isnull=True))
 
     @staticmethod
     def delete_by_id(order_id):
@@ -86,4 +122,8 @@ class Order(models.Model):
         :type order_id: int
         :return: True if object existed in the db and was removed or False if it didn't exist
         """
-        pass
+        order = Order.get_by_id(order_id)
+        if order is None:
+            return False
+        order.delete()
+        return True
