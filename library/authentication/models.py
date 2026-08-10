@@ -1,4 +1,5 @@
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.db import models
 
 ROLE_CHOICES = (
     (0, 'visitor'),
@@ -26,11 +27,21 @@ class CustomUser(AbstractBaseUser):
         param updated_at: Describes the date when the user was modified
         type updated_at: int (timestamp)
         param role: user role, default role (0, 'visitor')
-        type updated_at: int (choices)
-        param is_active: user role, default value False
-        type updated_at: bool
+        type role: int (choices)
+        param is_active: default value False
+        type is_active: bool
 
     """
+    first_name = models.CharField(max_length=20)
+    last_name = models.CharField(max_length=20)
+    middle_name = models.CharField(max_length=20)
+    email = models.CharField(max_length=100, unique=True)
+    password = models.CharField()
+    created_at = models.IntegerField(editable=False)
+    updated_at = models.IntegerField()
+    role = models.IntegerField(choices=ROLE_CHOICES)
+    is_active = models.BooleanField(default=False)
+
 
     def __str__(self):
         """
